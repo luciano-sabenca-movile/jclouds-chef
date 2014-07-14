@@ -22,10 +22,15 @@ import org.jclouds.chef.strategy.internal.ListClientsImpl;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.ImplementedBy;
 
+import java.util.concurrent.ExecutorService;
+
 @ImplementedBy(ListClientsImpl.class)
 public interface ListClients {
 
    Iterable<? extends Client> execute();
 
-   Iterable<? extends Client> execute(ListeningExecutorService executor);
+   Iterable<? extends Client> executeConcurrently(ExecutorService executor);
+
+   Iterable<? extends Client> executeConcurrently(ListeningExecutorService listeningExecutor);
+
 }

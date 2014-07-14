@@ -24,12 +24,14 @@ import java.io.InputStream;
 import java.security.PrivateKey;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Resource;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.jclouds.chef.ChefApi;
 import org.jclouds.chef.ChefContext;
 import org.jclouds.chef.ChefService;
@@ -92,7 +94,7 @@ public class BaseChefService implements ChefService {
    private final ListNodesInEnvironment listNodesInEnvironment;
    private final Json json;
    private final Crypto crypto;
-   
+
    @Resource
    @Named(ChefProperties.CHEF_LOGGER)
    protected Logger logger = Logger.NULL;
@@ -127,7 +129,8 @@ public class BaseChefService implements ChefService {
       this.runListForGroup = checkNotNull(runListForGroup, "runListForGroup");
       this.listEnvironments = checkNotNull(listEnvironments, "listEnvironments");
       this.listNodesInEnvironment = checkNotNull(listNodesInEnvironment, "listNodesInEnvironment");
-      this.listCookbookVersionsInEnvironment = checkNotNull(listCookbookVersionsInEnvironment, "listCookbookVersionsInEnvironment");
+      this.listCookbookVersionsInEnvironment = checkNotNull(listCookbookVersionsInEnvironment,
+            "listCookbookVersionsInEnvironment");
       this.json = checkNotNull(json, "json");
       this.crypto = checkNotNull(crypto, "crypto");
    }
@@ -139,18 +142,19 @@ public class BaseChefService implements ChefService {
 
    @Override
    public byte[] encrypt(InputSupplier<? extends InputStream> supplier) throws IOException {
-      return ByteStreams.toByteArray(new RSAEncryptingPayload(crypto, Payloads.newPayload(supplier.getInput()), privateKey
-            .get()));
+      return ByteStreams
+            .toByteArray(new RSAEncryptingPayload(crypto, Payloads.newPayload(supplier.getInput()), privateKey
+                  .get()));
    }
 
    @Override
    public byte[] decrypt(InputSupplier<? extends InputStream> supplier) throws IOException {
-      return ByteStreams.toByteArray(new RSADecryptingPayload(crypto, Payloads.newPayload(supplier.getInput()), privateKey
-            .get()));
+      return ByteStreams
+            .toByteArray(new RSADecryptingPayload(crypto, Payloads.newPayload(supplier.getInput()), privateKey
+                  .get()));
    }
 
-   @VisibleForTesting
-   String buildBootstrapConfiguration(BootstrapConfig bootstrapConfig) {
+   @VisibleForTesting String buildBootstrapConfiguration(BootstrapConfig bootstrapConfig) {
       checkNotNull(bootstrapConfig, "bootstrapConfig must not be null");
 
       Map<String, Object> configMap = Maps.newHashMap();
@@ -233,13 +237,45 @@ public class BaseChefService implements ChefService {
    }
 
    @Override
+   public Iterable<? extends Node> listNodesConcurrently(ExecutorService executorService) {
+      return listNodes.executeConcurrently(executorService);
+   }
+
+   @Override
+   public Iterable<? extends Node> listNodesConcurrently(ListeningExecutorService listeningExecutor) {
+      return listNodes.executeConcurrently(listeningExecutor);
+   }
+
+   @Override
    public Iterable<? extends Client> listClients() {
       return listClients.execute();
    }
 
    @Override
+   public Iterable<? extends Client> listClientsConcurrently(ExecutorService executorService) {
+      return listClients.executeConcurrently(executorService);
+   }
+
+   @Override
+   public Iterable<? extends Client> listClientsConcurrently(
+         ListeningExecutorService listeningExecutorService) {
+      return listClients.executeConcurrently(listeningExecutorService);
+   }
+
+   @Override
    public Iterable<? extends CookbookVersion> listCookbookVersions() {
       return listCookbookVersions.execute();
+   }
+
+   @Override public Iterable<? extends CookbookVersion> listCookbookVersionsConcurrently(
+         ExecutorService executorService) {
+      return listCookbookVersions.executeConcurrently(executorService);
+   }
+
+   @Override
+   public Iterable<? extends CookbookVersion> listCookbookVersionsConcurrently(
+         ListeningExecutorService listeningExecutor) {
+      return listCookbookVersions.executeConcurrently(listeningExecutor);
    }
 
    @Override
@@ -248,8 +284,34 @@ public class BaseChefService implements ChefService {
    }
 
    @Override
-   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironment(String environmentName, String numVersions) {
+   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ExecutorService executorService, String environmentName) {
+      return listCookbookVersionsInEnvironment.executeConcurrently(executorService, environmentName);
+   }
+
+   @Override
+   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutorService, String environmentName) {
+      return listCookbookVersionsInEnvironment.executeConcurrently(listeningExecutorService, environmentName);
+   }
+
+   @Override
+   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironment(String environmentName,
+         String numVersions) {
       return listCookbookVersionsInEnvironment.execute(environmentName, numVersions);
+   }
+
+   @Override
+   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ExecutorService executorService, String environmentName, String numVersions) {
+      return listCookbookVersionsInEnvironment.executeConcurrently(executorService, environmentName, numVersions);
+   }
+
+   @Override
+   public Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutorService, String environmentName, String numVersions) {
+      return listCookbookVersionsInEnvironment
+            .executeConcurrently(listeningExecutorService, environmentName, numVersions);
    }
 
    @Override
@@ -260,6 +322,18 @@ public class BaseChefService implements ChefService {
    @Override
    public Iterable<? extends Node> listNodesInEnvironment(String environmentName) {
       return listNodesInEnvironment.execute(environmentName);
+   }
+
+   @Override
+   public Iterable<? extends Node> listNodesInEnvironmentConcurrently(
+         ExecutorService executorService, String environmentName) {
+      return listNodesInEnvironment.executeConcurrently(executorService, environmentName);
+   }
+
+   @Override
+   public Iterable<? extends Node> listNodesInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutor, String environmentName) {
+      return listNodesInEnvironment.executeConcurrently(listeningExecutor, environmentName);
    }
 
 }

@@ -22,10 +22,15 @@ import org.jclouds.chef.strategy.internal.ListNodesImpl;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.ImplementedBy;
 
+import java.util.concurrent.ExecutorService;
+
 @ImplementedBy(ListNodesImpl.class)
 public interface ListNodes {
 
    Iterable<? extends Node> execute();
 
-   Iterable<? extends Node> execute(ListeningExecutorService executor);
+   Iterable<? extends Node> executeConcurrently(ListeningExecutorService executor);
+
+   Iterable<? extends Node> executeConcurrently(ExecutorService executor);
+
 }

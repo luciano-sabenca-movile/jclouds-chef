@@ -19,7 +19,9 @@ package org.jclouds.chef;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.jclouds.chef.domain.BootstrapConfig;
 import org.jclouds.chef.domain.Client;
 import org.jclouds.chef.domain.CookbookVersion;
@@ -41,7 +43,7 @@ public interface ChefService {
 
    /**
     * Gets the context that created this service.
-    * 
+    *
     * @return The context that created the service.
     */
    ChefContext getContext();
@@ -50,7 +52,7 @@ public interface ChefService {
 
    /**
     * Encrypts the given input stream.
-    * 
+    *
     * @param supplier The input stream to encrypt.
     * @return The encrypted bytes for the given input stream.
     * @throws IOException If there is an error reading from the input stream.
@@ -59,7 +61,7 @@ public interface ChefService {
 
    /**
     * Decrypts the given input stream.
-    * 
+    *
     * @param supplier The input stream to decrypt.
     * @return The decrypted bytes for the given input stream.
     * @throws IOException If there is an error reading from the input stream.
@@ -70,27 +72,27 @@ public interface ChefService {
 
    /**
     * Creates all steps necessary to bootstrap the node.
-    * 
+    *
     * @param group corresponds to a configured
-    *        {@link ChefProperties#CHEF_BOOTSTRAP_DATABAG} data bag where
-    *        run_list and other information are stored.
+    *              {@link ChefProperties#CHEF_BOOTSTRAP_DATABAG} data bag where
+    *              run_list and other information are stored.
     * @return The script used to bootstrap the node.
     */
    Statement createBootstrapScriptForGroup(String group);
 
    /**
     * Configures how the nodes of a certain group will be bootstrapped
-    * 
-    * @param group The group where the given bootstrap configuration will be
-    *        applied.
+    *
+    * @param group           The group where the given bootstrap configuration will be
+    *                        applied.
     * @param bootstrapConfig The configuration to be applied to the nodes in the
-    *        group.
+    *                        group.
     */
    void updateBootstrapConfigForGroup(String group, BootstrapConfig bootstrapConfig);
 
    /**
     * Gets the run list for the given group.
-    * 
+    *
     * @param The group to get the configured run list for.
     * @return run list for all nodes bootstrapped with a certain group
     */
@@ -98,10 +100,10 @@ public interface ChefService {
 
    /**
     * Gets the bootstrap configuration for a given group.
-    * <p>
+    * <p/>
     * The bootstrap configuration is a Json object containing the run list and
     * the configured attributes.
-    * 
+    *
     * @param group The name of the group.
     * @return The bootstrap configuration for the given group.
     */
@@ -111,9 +113,9 @@ public interface ChefService {
 
    /**
     * Creates a new node and populates the automatic attributes.
-    * 
+    *
     * @param nodeName The name of the node to create.
-    * @param runList The run list for the created node.
+    * @param runList  The run list for the created node.
     * @return The created node with the automatic attributes populated.
     * @see OhaiModule
     * @see ChefUtils#ohaiAutomaticAttributeBinder(com.google.inject.Binder)
@@ -122,7 +124,7 @@ public interface ChefService {
 
    /**
     * Updates and populate the automatic attributes of the given node.
-    * 
+    *
     * @param nodeName The node to update.
     */
    void updateAutomaticAttributesOnNode(String nodeName);
@@ -130,37 +132,51 @@ public interface ChefService {
    /**
     * Removes the nodes and clients that have been inactive for a given amount of
     * time.
-    * 
-    * @param prefix The prefix for the nodes and clients to delete.
+    *
+    * @param prefix       The prefix for the nodes and clients to delete.
     * @param secondsStale The seconds of inactivity to consider a node and
-    *        client obsolete.
+    *                     client obsolete.
     */
    void cleanupStaleNodesAndClients(String prefix, int secondsStale);
 
    /**
     * Deletes the given nodes.
-    * 
+    *
     * @param names The names of the nodes to delete.
     */
    void deleteAllNodesInList(Iterable<String> names);
 
    /**
     * Deletes the given clients.
-    * 
+    *
     * @param names The names of the client to delete.
     */
    void deleteAllClientsInList(Iterable<String> names);
 
    /**
     * Lists the details of all existing nodes.
-    * 
+    *
     * @return The details of all existing nodes.
     */
    Iterable<? extends Node> listNodes();
 
    /**
+    * Lists the details of all existing nodes, executing concurrently using the executorService.
+    *
+    * @return The details of all existing nodes.
+    */
+   Iterable<? extends Node> listNodesConcurrently(ExecutorService executorService);
+
+   /**
+    * Lists the details of all existing nodes, executing concurrently using the listeningExecutorService.
+    *
+    * @return The details of all existing nodes.
+    */
+   Iterable<? extends Node> listNodesConcurrently(ListeningExecutorService listeningExecutor);
+
+   /**
     * Lists the details of all existing nodes in the given environment.
-    * 
+    *
     * @param environmentName The name fo the environment.
     * @return The details of all existing nodes in the given environment.
     */
@@ -168,18 +184,70 @@ public interface ChefService {
    Iterable<? extends Node> listNodesInEnvironment(String environmentName);
 
    /**
+    * Lists the details of all existing nodes in the given environment, using the ExecutorService to paralleling the execution.
+    *
+    * @param executorService The thread pool used in this operation
+    * @param environmentName The name fo the environment.
+    * @return The details of all existing nodes in the given environment.
+    */
+   @SinceApiVersion("0.10.0")
+   Iterable<? extends Node> listNodesInEnvironmentConcurrently(
+         ExecutorService executorService, String environmentName
+   );
+
+   /**
+    * Lists the details of all existing nodes in the given environment, using the ListeningExecutorService to paralleling the execution.
+    *
+    * @param listeningExecutor The thread pool used in this operation
+    * @param environmentName The name fo the environment.
+    * @return The details of all existing nodes in the given environment.
+    */
+   @SinceApiVersion("0.10.0")
+   Iterable<? extends Node> listNodesInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutor, String environmentName
+   );
+
+   /**
     * Lists the details of all existing clients.
-    * 
+    *
     * @return The details of all existing clients.
     */
    Iterable<? extends Client> listClients();
 
    /**
+    * Lists the details of all existing clients, but executing concurrently using the threads available in the ExecutorService.
+    *
+    * @return The details of all existing clients.
+    */
+   Iterable<? extends Client> listClientsConcurrently(ExecutorService executorService);
+
+   /**
+    * Lists the details of all existing clients, but executing concurrently using the threads available in the ListeningExecutorService.
+    *
+    * @return The details of all existing clients.
+    */
+   Iterable<? extends Client> listClientsConcurrently(ListeningExecutorService listeningExecutorService);
+
+   /**
     * Lists the details of all existing cookbooks.
-    * 
+    *
     * @return The details of all existing cookbooks.
     */
    Iterable<? extends CookbookVersion> listCookbookVersions();
+
+   /**
+    * Lists the details of all existing cookbooks. This method is executed concurrently, using the threads available in the ExecutorService.
+    *
+    * @return The details of all existing cookbooks.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsConcurrently(ExecutorService executorService);
+
+   /**
+    * Lists the details of all existing cookbooks. This method is executed concurrently, using the threads available in the ListeningExecutorService.
+    *
+    * @return The details of all existing cookbooks.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsConcurrently(ListeningExecutorService listeningExecutor);
 
    /**
     * Lists the details of all existing cookbooks in an environment.
@@ -190,19 +258,65 @@ public interface ChefService {
    Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironment(String environmentName);
 
    /**
+    * Lists the details of all existing cookbooks in an environment.
+
+    * @param executorService The thread pool to do the concurrent execution.
+    * @param environmentName The environment name.
+    * @return The details of all existing cookbooks in an environment.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(ExecutorService executorService,
+         String environmentName);
+
+   /**
+    * Lists the details of all existing cookbooks in an environment.
+    *
+    * @param listeningExecutorService The thread pool to do the concurrent execution.
+    * @param environmentName The environment name.
+    * @return The details of all existing cookbooks in an environment.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutorService, String environmentName);
+
+   /**
     * Lists the details of all existing cookbooks in an environment
     * limiting number of versions.
     *
     * @param environmentName The environment name.
-    * @param numVersions The number of cookbook versions to include.
-    *                    Use 'all' to return all cookbook versions.
+    * @param numVersions     The number of cookbook versions to include.
+    *                        Use 'all' to return all cookbook versions.
     * @return The details of all existing cookbooks in environment.
     */
    Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironment(String environmentName, String numVersions);
 
    /**
+    * Lists the details of all existing cookbooks in an environment
+    * limiting number of versions.
+    *
+    * @param executorService The executorService used to do this operation concurrently.
+    * @param environmentName The environment name.
+    * @param numVersions     The number of cookbook versions to include.
+    *                        Use 'all' to return all cookbook versions.
+    * @return The details of all existing cookbooks in environment.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(ExecutorService executorService,
+         String environmentName, String numVersions);
+
+   /**
+    * Lists the details of all existing cookbooks in an environment
+    * limiting number of versions.
+    *
+    * @param listeningExecutorService The ListeningExecutorService used to do this operation concurrently.
+    * @param environmentName The environment name.
+    * @param numVersions     The number of cookbook versions to include.
+    *                        Use 'all' to return all cookbook versions.
+    * @return The details of all existing cookbooks in environment.
+    */
+   Iterable<? extends CookbookVersion> listCookbookVersionsInEnvironmentConcurrently(
+         ListeningExecutorService listeningExecutorService, String environmentName, String numVersions);
+
+   /**
     * Lists the details of all existing environments.
-    * 
+    *
     * @return The details of all existing environments.
     */
    @SinceApiVersion("0.10.0")
