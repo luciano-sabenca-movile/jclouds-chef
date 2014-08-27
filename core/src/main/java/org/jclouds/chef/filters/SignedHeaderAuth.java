@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.hash.Hashing.sha1;
 import static com.google.common.io.BaseEncoding.base64;
-import static com.google.common.io.ByteStreams.toByteArray;
 
 import java.io.IOException;
 import java.security.PrivateKey;
@@ -42,7 +41,7 @@ import org.jclouds.http.HttpRequest;
 import org.jclouds.http.HttpRequestFilter;
 import org.jclouds.http.HttpUtils;
 import org.jclouds.http.internal.SignatureWire;
-import org.jclouds.io.ByteSources;
+import org.jclouds.io.ByteStreams2;
 import org.jclouds.io.Payload;
 import org.jclouds.io.Payloads;
 import org.jclouds.io.payloads.MultipartForm;
@@ -162,7 +161,7 @@ public class SignedHeaderAuth implements HttpRequestFilter {
       checkArgument(payload != null, "payload was null");
       checkArgument(payload.isRepeatable(), "payload must be repeatable: " + payload);
       try {
-         return base64().encode(ByteSources.asByteSource(payload.getInput()).hash(sha1()).asBytes());
+         return base64().encode(ByteStreams2.hashAndClose(payload.getInput(), sha1()).asBytes());
       } catch (Exception e) {
          Throwables.propagateIfPossible(e);
          throw new HttpException("error creating sigature for payload: " + payload, e);
@@ -190,7 +189,7 @@ public class SignedHeaderAuth implements HttpRequestFilter {
 
    public String sign(String toSign) {
       try {
-         byte[] encrypted = toByteArray(new RSAEncryptingPayload(crypto, Payloads.newStringPayload(toSign), supplyKey.get()));
+         byte[] encrypted = ByteStreams2.toByteArrayAndClose(new RSAEncryptingPayload(crypto, Payloads.newStringPayload(toSign), supplyKey.get()).openStream());
          return base64().encode(encrypted);
       } catch (IOException e) {
          throw new HttpException("error signing request", e);
