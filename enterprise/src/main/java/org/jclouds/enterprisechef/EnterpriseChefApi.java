@@ -66,6 +66,17 @@ public interface EnterpriseChefApi extends ChefApi
     User getUser(@PathParam("name") String name);
 
     /**
+     * Deletes an user.
+     *
+     * @param name The name of the user to delete.
+     */
+    @Named("user:delete")
+    @DELETE
+    @Path("/users/{name}")
+    @Fallback(NullOnNotFoundOr404.class)
+    void deleteUser(@PathParam("name") String name);
+
+    /**
      * List all existing groups.
      * 
      * @return The list of groups.
@@ -120,5 +131,6 @@ public interface EnterpriseChefApi extends ChefApi
     @DELETE
     @Path("/groups/{name}")
     void deleteGroup(@PathParam("name") String name);
+
 
 }
